@@ -53,17 +53,5 @@ commonLabels:
   app.kubernetes.io/instance: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
   app.kubernetes.io/managed-by: kustomize
 
-# Zmienne
-vars:
-  - name: NAMESPACE
-    objref:
-      kind: Namespace
-      name: davtroelkpyjs
-    fieldref:
-      fieldpath: metadata.name
-  - name: PROJECT
-    objref:
-      kind: ConfigMap
-      name: fastapi-config
-    fieldref:
-      fieldpath: data.PROJECT
+# Zmienne (usunięte — nieużywane i powodowały błąd mapowania)
+# vars were removed because no resources contained placeholders for them
