@@ -12,6 +12,7 @@ resources:
   - kafka-job-sa.yaml
   - kafka-topic-job.yaml
   - fastapi-config.yaml
+  - namespace.yaml
   - app-deployment.yaml
   - message-processor.yaml
   - prometheus-config.yaml
