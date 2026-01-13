@@ -16,7 +16,11 @@ libraryDependencies ++= Seq(
   "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.15.2"
 )
 
-assemblyMergeStrategy in assembly := {
+// sbt-assembly settings
+import sbtassembly.AssemblyPlugin.autoImport._
+import sbtassembly.MergeStrategy
+
+assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case x => MergeStrategy.first
+  case _ => MergeStrategy.first
 }
