@@ -1,5 +1,9 @@
 name: CI/CD Extended - Full Stack
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   push:
     branches: [main]
@@ -17,6 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Build Python Docker image
         uses: docker/build-push-action@v4
@@ -47,6 +58,13 @@ jobs:
           chmod +x mvnw
           ./mvnw clean package -DskipTests
       
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Spring Docker image
         uses: docker/build-push-action@v4
         with:
@@ -72,6 +90,13 @@ jobs:
         run: |
           sbt assembly
       
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Spark Docker image
         uses: docker/build-push-action@v4
         with:
