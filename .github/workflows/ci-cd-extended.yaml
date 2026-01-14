@@ -3,6 +3,7 @@ name: CI/CD Extended - Full Stack
 permissions:
   contents: read
   packages: write
+  security-events: write # Dodano dla CodeQL
 
 on:
   push:
@@ -113,9 +114,153 @@ jobs:
             ghcr.io/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar-spark:latest
             ghcr.io/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar-spark:${{ github.sha }}
 
-  deploy:
+  security-scan:
     runs-on: ubuntu-latest
     needs: [build-python, build-spring, build-spark]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # SAST - CodeQL dla Python i Java
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python, java
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      # SAST - Bandit dla Pythona
+      - name: Run Bandit SAST for Python
+        run: |
+          pip install bandit
+          if [ -d "app" ]; then
+            bandit -r app -f json -o bandit-python-results.json || true
+          fi
+          if [ -f "requirements.txt" ]; then
+            bandit -r . -f json -o bandit-global-results.json || true
+          fi
+        continue-on-error: true
+
+      - name: Upload Bandit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-results
+          path: bandit-*.json
+
+      # SAST - SpotBugs dla Java
+      - name: Run SpotBugs SAST for Java
+        working-directory: ./java-app
+        run: |
+          if [ -f "pom.xml" ]; then
+            mvn spotbugs:spotbugs -DskipTests
+            mvn spotbugs:check -DskipTests || true
+          fi
+        continue-on-error: true
+
+      # Container Security - Trivy dla Dockerfile
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "HIGH,CRITICAL"
+
+      - name: Upload Trivy scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
+
+      # Container Security - Trivy dla zbudowanych obrazów
+      - name: Scan Python container with Trivy
+        run: |
+          docker pull ghcr.io/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar:${{ github.sha }}
+          trivy image --format sarif --output trivy-python-image.sarif \
+            --severity HIGH,CRITICAL \
+            ghcr.io/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar:${{ github.sha }}
+        continue-on-error: true
+
+      - name: Scan Spring container with Trivy
+        run: |
+          docker pull ghcr.io/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar-spring:${{ github.sha }}
+          trivy image --format sarif --output trivy-spring-image.sarif \
+            --severity HIGH,CRITICAL \
+            ghcr.io/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar-spring:${{ github.sha }}
+        continue-on-error: true
+
+      # Kubernetes Validation - kubeval
+      - name: Validate Kubernetes manifests
+        run: |
+          if [ -d "manifests" ]; then
+            docker run -v $(pwd):/src garethr/kubeval manifests/**/*.yaml manifests/**/*.yml \
+              --ignore-missing-schemas || true
+          fi
+        continue-on-error: true
+
+      # Secret Scanning - TruffleHog
+      - name: Run TruffleHog secret scanning
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.base_ref || 'origin/main' }}
+          extra_args: --debug --only-verified
+
+      # Dependency Scanning dla Python
+      - name: Run safety check for Python dependencies
+        run: |
+          if [ -f "requirements.txt" ]; then
+            pip install safety
+            safety check --json --output safety-report.json || true
+          fi
+        continue-on-error: true
+
+      # DAST - OWASP ZAP Baseline Scan (wymaga uruchomionych usług)
+      - name: Start services for DAST testing
+        run: |
+          docker network create test-network || true
+          # Uruchomienie testowej wersji aplikacji do skanowania
+          docker run -d --name test-fastapi --network test-network \
+            -p 8080:8080 \
+            ghcr.io/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar:${{ github.sha }}
+          sleep 30  # Czekaj na uruchomienie aplikacji
+
+      - name: Run ZAP Baseline Scan
+        run: |
+          docker run --network test-network \
+            -v $(pwd):/zap/wrk/:rw \
+            -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+            -t http://test-fastapi:8080 \
+            -g gen.conf \
+            -r zap-report.html \
+            -I \
+            -x zap-report.xml || true
+        continue-on-error: true
+
+      - name: Cleanup test services
+        run: |
+          docker stop test-fastapi || true
+          docker rm test-fastapi || true
+          docker network rm test-network || true
+
+      - name: Upload ZAP report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-dast-report
+          path: |
+            zap-report.html
+            zap-report.xml
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-python, build-spring, build-spark, security-scan]
     environment: production
     steps:
       - uses: actions/checkout@v4

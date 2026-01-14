@@ -6960,128 +6960,107 @@ kubectl rollout restart deployment/spring-app -n ${NAMESPACE}
 README
 }
 
-generate_deploy_script(){
- cat > "${ROOT_DIR}/deploy-extended.sh" <<'BASH'
-#!/bin/bash
+# Focused deploy script (replaces generator output)
+
+# This file was updated to be a minimal, safe deploy script limited to this repository.
+# It only operates on manifests under ./manifests/base and will not touch other folders.
+
+#!/usr/bin/env bash
 set -euo pipefail
+trap 'rc=$?; echo "❌ Error on line ${LINENO} (exit ${rc})"; exit ${rc}' ERR
+IFS=$'\n\t'
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NAMESPACE="davtroelkpyjs"
+PROJECT="website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar"
+NAMESPACE="${NAMESPACE:-davtroelkpyjs}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MANIFESTS_DIR="${ROOT_DIR}/manifests/base"
 
-echo "🚀 Deploying Extended Stack: Spring Boot + Spark + MongoDB + ELK"
+usage(){
+  cat <<EOF
+Usage: $0 <command>
 
-# 1. Deploy new databases
-echo "📦 Deploying MongoDB..."
-kubectl apply -f "${PROJECT_DIR}/manifests/base/mongodb.yaml" -n "${NAMESPACE}"
-
-echo "📦 Deploying ELK Stack..."
-kubectl apply -f "${PROJECT_DIR}/manifests/base/elasticsearch.yaml" -n "${NAMESPACE}"
-kubectl apply -f "${PROJECT_DIR}/manifests/base/logstash.yaml" -n "${NAMESPACE}"
-kubectl apply -f "${PROJECT_DIR}/manifests/base/kibana.yaml" -n "${NAMESPACE}"
-
-# 2. Wait for databases
-echo "⏳ Waiting for MongoDB..."
-kubectl wait --for=condition=ready pod -l app=website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar,component=mongodb -n "${NAMESPACE}" --timeout=300s
-
-echo "⏳ Waiting for Elasticsearch..."
-kubectl wait --for=condition=ready pod -l app=website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar,component=elasticsearch -n "${NAMESPACE}" --timeout=300s
-
-# 3. Initialize MongoDB
-echo "🔧 Initializing MongoDB..."
-kubectl wait --for=condition=complete job/mongodb-init -n "${NAMESPACE}" --timeout=300s
-
-# 4. Deploy Spark
-echo "⚡ Deploying Apache Spark..."
-kubectl apply -f "${PROJECT_DIR}/manifests/base/spark-master.yaml" -n "${NAMESPACE}"
-kubectl apply -f "${PROJECT_DIR}/manifests/base/spark-worker.yaml" -n "${NAMESPACE}"
-
-# 5. Deploy Spring Boot
-echo "🌱 Deploying Spring Boot..."
-kubectl apply -f "${PROJECT_DIR}/manifests/base/spring-app-deployment.yaml" -n "${NAMESPACE}"
-
-# 6. Wait for services
-echo "⏳ Waiting for Spark Master..."
-kubectl wait --for=condition=ready pod -l app=website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar,component=spark-master -n "${NAMESPACE}" --timeout=300s
-
-echo "⏳ Waiting for Spring Boot..."
-kubectl wait --for=condition=ready pod -l app=website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar,component=spring-app -n "${NAMESPACE}" --timeout=300s
-
-# 7. Update FastAPI with new routes
-echo "🔄 Updating FastAPI deployment..."
-kubectl rollout restart deployment/fastapi-web-app -n "${NAMESPACE}"
-kubectl wait --for=condition=ready pod -l app=website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar,component=fastapi -n "${NAMESPACE}" --timeout=300s
-
-# 8. Update Ingress
-echo "🌐 Updating Ingress..."
-kubectl apply -f "${PROJECT_DIR}/manifests/base/ingress-extended.yaml" -n "${NAMESPACE}"
-
-# 9. Update monitoring
-echo "📊 Updating monitoring..."
-kubectl apply -f "${PROJECT_DIR}/manifests/base/monitoring-extended.yaml" -n "${NAMESPACE}"
-
-echo ""
-echo "✅ Extended stack deployment complete!"
-echo ""
-echo "🌐 Access points:"
-echo "   Main App:        http://app.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local"
-echo "   New Survey:      http://app.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local/new-survey"
-echo "   Spring Boot API: http://spring.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local"
-echo "   Spark UI:        http://spark.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local"
-echo "   Kibana:          http://kibana.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local"
-echo "   Grafana:         http://grafana.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local"
-echo "   PgAdmin:         http://pgadmin.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local"
-echo "   Kafka UI:        http://kafka-ui.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local"
-echo ""
-echo "🔍 Check pods:"
-echo "   kubectl get pods -n ${NAMESPACE}"
-echo ""
-echo "📈 Check services:"
-echo "   kubectl get svc -n ${NAMESPACE}"
-BASH
-
- chmod +x "${ROOT_DIR}/deploy-extended.sh"
+Commands:
+  apply    Apply manifests in ${MANIFESTS_DIR} to namespace ${NAMESPACE}
+  delete   Delete manifests from namespace ${NAMESPACE}
+  status   Show pods and services in namespace ${NAMESPACE}
+EOF
+  exit 1
 }
 
-generate_all(){
- generate_structure
- generate_fastapi_app
- generate_spring_app
- generate_spark_jobs
- generate_dockerfile
- generate_github_actions
- generate_k8s_manifests
- generate_deploy_script
- generate_readme
- echo
- echo "✅ Generation complete!"
- echo "📁 Structure:"
- echo "   📁 app/ - FastAPI application with Vault integration and Spring Boot proxy"
- echo "   📁 java-app/ - Spring Boot application with MongoDB and Kafka"
- echo "   📁 spark-jobs/ - Apache Spark analytics jobs"
- echo "   📁 elk/ - ELK Stack configurations"
- echo "   📁 manifests/base/ - ALL Kubernetes manifests"
- echo "   📄 Dockerfile - Container definition"
- echo "   📄 .github/workflows/ci-cd-extended.yaml - GitHub Actions for full stack"
- echo "   📄 deploy-extended.sh - Deployment script"
- echo "   📄 README.md - Complete documentation"
- echo
- echo "🚀 Next steps:"
- echo "1. Deploy: ./deploy-extended.sh"
- echo "2. Watch: kubectl -n ${NAMESPACE} get pods -w"
- echo "3. Access main app: http://app.${PROJECT}.local"
- echo "4. Access new survey: http://app.${PROJECT}.local/new-survey"
- echo "5. Monitor: http://grafana.${PROJECT}.local (admin/admin)"
- echo "6. View logs: http://kibana.${PROJECT}.local"
- echo "7. Manage DB: http://pgadmin.${PROJECT}.local (admin@example.com/adminpassword)"
- echo "8. View Kafka: http://kafka-ui.${PROJECT}.local"
+ensure_kubectl(){
+  if ! command -v kubectl >/dev/null 2>&1; then
+    echo "kubectl not found in PATH; please install / configure kubectl and kubeconfig"
+    exit 2
+  fi
 }
 
-case "$1" in
-  generate)
-    generate_all
-    ;;
-  *)
-    echo "Usage: $0 generate"
+apply(){
+  ensure_kubectl
+
+  if [ ! -d "${MANIFESTS_DIR}" ]; then
+    echo "Manifests directory ${MANIFESTS_DIR} not found. Nothing to apply."
     exit 1
-    ;;
+  fi
+
+  echo "📦 Creating namespace ${NAMESPACE} if missing..."
+  kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1 || kubectl create namespace "${NAMESPACE}"
+
+  echo "📥 Applying manifests from ${MANIFESTS_DIR}..."
+  kubectl apply -f "${MANIFESTS_DIR}" -n "${NAMESPACE}"
+
+  echo "⏳ Waiting for key components to become ready (this may take a few minutes)..."
+  set +e
+  kubectl wait --for=condition=ready pod -l component=fastapi -n "${NAMESPACE}" --timeout=180s
+  kubectl wait --for=condition=ready pod -l component=spring -n "${NAMESPACE}" --timeout=180s
+  kubectl wait --for=condition=ready pod -l component=spark-master -n "${NAMESPACE}" --timeout=240s
+  kubectl wait --for=condition=ready pod -l component=postgres -n "${NAMESPACE}" --timeout=180s
+  kubectl wait --for=condition=ready pod -l component=redis -n "${NAMESPACE}" --timeout=120s
+  kubectl wait --for=condition=ready pod -l component=kafka -n "${NAMESPACE}" --timeout=240s
+  set -e
+
+  if kubectl get job vault-init -n "${NAMESPACE}" >/dev/null 2>&1; then
+    echo "🔐 Waiting for vault initialization job to complete..."
+    kubectl wait --for=condition=complete job/vault-init -n "${NAMESPACE}" --timeout=120s || echo "Vault init job did not complete within timeout or already completed."
+  fi
+
+  echo "🔄 Performing rollout restart for FastAPI to pick up potential new routes..."
+  kubectl rollout restart deployment/fastapi-web-app -n "${NAMESPACE}" 2>/dev/null || true
+
+  echo "\n✅ Apply complete. Access hints:"
+  echo "   Main App:  http://app.${PROJECT}.local"
+  echo "   New Survey: http://app.${PROJECT}.local/new-survey"
+  echo "   Spring API: http://spring.${PROJECT}.local"
+  echo "   Spark UI:   http://spark.${PROJECT}.local"
+  echo "   Kibana:     http://kibana.${PROJECT}.local"
+  echo "   Grafana:    http://grafana.${PROJECT}.local"
+  echo "   PgAdmin:    http://pgadmin.${PROJECT}.local"
+}
+
+_delete(){
+  echo "🗑️ Deleting resources defined in ${MANIFESTS_DIR} from namespace ${NAMESPACE}..."
+  kubectl delete -f "${MANIFESTS_DIR}" -n "${NAMESPACE}" --ignore-not-found
+}
+
+delete(){
+  ensure_kubectl
+  read -p "Are you sure you want to delete all resources in ${NAMESPACE} defined by ${MANIFESTS_DIR}? [y/N] " yn
+  case "${yn}" in
+    [Yy]* ) _delete; echo "✅ Delete requested." ;;
+    * ) echo "Aborted."; exit 0 ;;
+  esac
+}
+
+status(){
+  ensure_kubectl
+  echo "📋 Pods in namespace ${NAMESPACE}:"
+  kubectl get pods -n "${NAMESPACE}"
+  echo "\n🔌 Services in namespace ${NAMESPACE}:"
+  kubectl get svc -n "${NAMESPACE}"
+}
+
+case "${1:-}" in
+  apply) apply ;;
+  delete) delete ;;
+  status) status ;;
+  *) usage ;;
 esac
