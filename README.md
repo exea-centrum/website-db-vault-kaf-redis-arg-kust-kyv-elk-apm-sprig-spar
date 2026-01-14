@@ -2,6 +2,41 @@
 
 ## 🛠️ Quick Start
 
+## git clone https://github.com/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.git
+
+##
+
+##
+
+## git push
+
+## put the content of yaml into argocd argocd-application.yaml
+
+## He will download ArgoCD from github and handle everything
+
+```bash
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.git
+    targetRevision: HEAD
+    path: manifests/base
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: davtroelkpyjs
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+```
+
 ```bash
 # Generate all files
 ./lmarena.sh generate
@@ -31,20 +66,21 @@ kubectl wait --for=condition=complete job/mongodb-init -n davtroelkpyjs
 
 ## 🌐 Access Points
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Application | http://app.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local | - |
-| New Survey (Spring Boot) | http://app.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local/new-survey | - |
-| Spring Boot API | http://spring.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local | - |
-| Spark Master UI | http://spark.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local | - |
-| Kibana | http://kibana.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local | - |
-| Grafana | http://grafana.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local | admin/admin |
-| PgAdmin | http://pgadmin.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local | admin@example.com/adminpassword |
-| Kafka UI | http://kafka-ui.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local | - |
+| Service                  | URL                                                                                    | Credentials                     |
+| ------------------------ | -------------------------------------------------------------------------------------- | ------------------------------- |
+| Application              | http://app.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local            | -                               |
+| New Survey (Spring Boot) | http://app.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local/new-survey | -                               |
+| Spring Boot API          | http://spring.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local         | -                               |
+| Spark Master UI          | http://spark.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local          | -                               |
+| Kibana                   | http://kibana.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local         | -                               |
+| Grafana                  | http://grafana.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local        | admin/admin                     |
+| PgAdmin                  | http://pgadmin.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local        | admin@example.com/adminpassword |
+| Kafka UI                 | http://kafka-ui.website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar.local       | -                               |
 
 ## 🏗️ Architecture Components:
 
 ### 1. **Python FastAPI Stack** (Original)
+
 - **FastAPI Application** - Main web application with Vault integration
 - **PostgreSQL** - Relational database for survey data
 - **Redis** - Message queue for async processing
@@ -53,12 +89,14 @@ kubectl wait --for=condition=complete job/mongodb-init -n davtroelkpyjs
 - **Monitoring Stack** - Prometheus, Grafana, Loki, Tempo
 
 ### 2. **Java Spring Boot Stack** (New)
+
 - **Spring Boot API** - REST API for new survey with MongoDB
 - **MongoDB** - NoSQL database for survey responses
 - **Apache Spark** - Real-time data processing and analytics
 - **ELK Stack** - Elasticsearch, Logstash, Kibana for logging
 
 ### 3. **JavaScript Frontend** (New)
+
 - **Modern JavaScript UI** - Interactive survey with React-like components
 - **Chart.js** - Data visualization for survey statistics
 - **Tailwind CSS** - Modern styling
@@ -106,6 +144,7 @@ kubectl get ingress -n davtroelkpyjs
 ## 🔄 CI/CD Pipeline:
 
 GitHub Actions automatically builds and deploys:
+
 1. **Python FastAPI application**
 2. **Spring Boot Java application**
 3. **Apache Spark jobs**
