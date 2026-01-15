@@ -148,7 +148,7 @@ GitHub Actions automatically builds and deploys:
 1. **Python FastAPI application**
 2. **Spring Boot Java application**
 3. **Apache Spark jobs**
-4. **Dodano job security-scan z kompleksowymi testami bezpieczeństwa:**
+4. **Dodałem job security-scan z kompleksowymi testami bezpieczeństwa:**
 
 - SAST: CodeQL (Python, Java), Bandit (Python), SpotBugs (Java)
 - Container Security: Trivy dla Dockerfile i zbudowanych obrazów
