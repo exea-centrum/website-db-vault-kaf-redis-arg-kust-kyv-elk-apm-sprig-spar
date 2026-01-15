@@ -162,6 +162,11 @@ GitHub Actions automatically builds and deploys:
 - pip-audit: Nowoczesna alternatywa dla Safety. Używa bazy PyPA, która jest często szybciej aktualizowana o nowe podatności w Pythonie.
 - OWASP Dependency-Check: Złoty standard dla Javy. Skanuje plik pom.xml i pobiera dane z bazy NVD (National Vulnerability Database).
 - Syft: Generuje SBOM (Software Bill of Materials). To plik JSON, który jest "paszportem" Twojego kontenera - zawiera listę każdej biblioteki zainstalowanej w obrazie.
+  | Cecha | SAST | DAST | SCA | IAST |
+  |--------------------|-------------------------------|-------------------------------|-------------------------------|-------------------------------|
+  | **Podejście** | White-box (kod źródłowy) | Black-box (testy zewnętrzne) | Analiza zależności | Hybrydowe (kod + runtime) |
+  | **Stan aplikacji** | Statyczny (aplikacja nie działa) | Dynamiczny (aplikacja działa) | Statyczny / Dynamiczny | Dynamiczny (agent w środku) |
+  | **Koszt naprawy** | Najniższy (wczesna faza) | Średni / Wysoki | Zależy od wykrytej wersji | Średni |
   - actions/checkout@v4
     pobiera kod źródłowy repozytorium na maszynę runnera; bez tego nie ma czego budować ani skanować.
   - docker/login-action@v2
