@@ -148,7 +148,16 @@ GitHub Actions automatically builds and deploys:
 1. **Python FastAPI application**
 2. **Spring Boot Java application**
 3. **Apache Spark jobs**
-4. **Deploys to Kubernetes**
+4. **Dodano job security-scan z kompleksowymi testami bezpieczeństwa:**
+
+- SAST: CodeQL (Python, Java), Bandit (Python), SpotBugs (Java)
+- Container Security: Trivy dla Dockerfile i zbudowanych obrazów
+- Kubernetes Validation: kubeval dla manifestów
+- Secret Scanning: TruffleHog
+- Dependency Scanning: Safety dla Pythona
+- DAST: OWASP ZAP z uruchamianiem testowych kontenerów
+
+5. **Deploys to Kubernetes**
 
 ## 📈 Data Flow:
 
