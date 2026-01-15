@@ -148,7 +148,7 @@ GitHub Actions automatically builds and deploys:
 1. **Python FastAPI application**
 2. **Spring Boot Java application**
 3. **Apache Spark jobs**
-4. **Dodałem job security-scan z kompleksowymi testami bezpieczeństwa:**
+4. **security-scan Dodałem job z kompleksowymi testami bezpieczeństwa:**
    - SAST: CodeQL (Python, Java), Bandit (Python), SpotBugs (Java)
    - Container Security: Trivy dla Dockerfile i zbudowanych obrazów. CVE-....
    - Kubernetes Validation: kubeval dla manifestów
@@ -161,34 +161,37 @@ GitHub Actions automatically builds and deploys:
    - pip-audit: Nowoczesna alternatywa dla Safety. Używa bazy PyPA, która jest często szybciej aktualizowana o nowe podatności w Pythonie.
    - OWASP Dependency-Check: Złoty standard dla Javy. Skanuje plik pom.xml i pobiera dane z bazy NVD (National Vulnerability Database).
    - Syft: Generuje SBOM (Software Bill of Materials). To plik JSON, który jest "paszportem" Twojego kontenera - zawiera listę każdej biblioteki zainstalowanej w obrazie.
-     actions/checkout@v4
-   - pobiera kod źródłowy repozytorium na maszynę runnera; bez tego nie ma czego budować ani skanować.
-     docker/login-action@v2
-   - loguje runnera do GitHub Container Registry (ghcr.io), żeby później móc „pushowa” obrazy.
-     docker/build-push-action@v4
-   - buduje obraz Docker według Dockerfile i od razu wypycha go do ghcr.io z podanymi tagami.
-     actions/setup-java@v3
-   - instaluje JDK (tu wersję 17) i Maven/Gradle; bez tego nie zbudujesz Springa.
-     olafurpg/setup-scala@v13
-   - instaluje Javę 11 oraz Scala/SBT; potrzebny do zbudowania jobów Sparka.
-     github/codeql-action/init@v3
-   - inicjalizuje silnik CodeQL (SAST) i przygotowuje go do analizy Pythona i Javy.
-     github/codeql-action/autobuild@v3
-   - próbuje samodzielnie skompilować projekt, żeby CodeQL mógł przeanalizować bytecode.
-     github/codeql-action/analyze@v3
-   - uruchamia właściwą analizę statyczną i wysyła wyniki do zakładki „Security” w repo.
-     hadolint/hadolint-action@v3.1.0
-   - lintuje Dockerfile - szuka błędów stylu, bezpieczeństwa i wydajności w instrukcjach Docker.
-     bridgecrewio/checkov-action@master
-   - skanuje infrastrukturę (Kubernetes, Dockerfile) pod kątem 750+ gotowych reguł bezpieczeństwa.
-     gitleaks/gitleaks-action@v2
-   - przeszuka historii gita w poszukiwaniu wyciekniętych sekretów (tokeny, klucze, hasła).
-     aquasecurity/trivy-action@master
-   - Trivy: skanuje pliki na dysku (fs), obrazy Docker i repozytoria pod kątem CVE (HIGH/CRITICAL).
-     actions/upload-artifact@v4
-   - zbiera wszystkie raporty (JSON, SARIF, HTML) z przebiegu i zapisuje je jako pliki do pobrania w UI GitHuba.
-     actions/setup-kustomize (wbudowany)
-   - instaluje narzędzie Kustomize, dzięki któremu można podmienić wersje obrazów w manifestach K8s
+   -
+
+- actions/checkout@v4
+  pobiera kod źródłowy repozytorium na maszynę runnera; bez tego nie ma czego budować ani skanować.
+- docker/login-action@v2
+  loguje runnera do GitHub Container Registry (ghcr.io), żeby później móc „pushowa” obrazy.
+- docker/build-push-action@v4
+  buduje obraz Docker według Dockerfile i od razu wypycha go do ghcr.io z podanymi tagami.
+- actions/setup-java@v3
+  instaluje JDK (tu wersję 17) i Maven/Gradle; bez tego nie zbudujesz Springa.
+- olafurpg/setup-scala@v13
+  instaluje Javę 11 oraz Scala/SBT; potrzebny do zbudowania jobów Sparka.
+- github/codeql-action/init@v3
+  inicjalizuje silnik CodeQL (SAST) i przygotowuje go do analizy Pythona i Javy.
+- github/codeql-action/autobuild@v3
+  próbuje samodzielnie skompilować projekt, żeby CodeQL mógł przeanalizować bytecode.
+- github/codeql-action/analyze@v3
+  uruchamia właściwą analizę statyczną i wysyła wyniki do zakładki „Security” w repo.
+- hadolint/hadolint-action@v3.1.0
+  lintuje Dockerfile - szuka błędów stylu, bezpieczeństwa i wydajności w instrukcjach Docker.
+- bridgecrewio/checkov-action@master
+  skanuje infrastrukturę (Kubernetes, Dockerfile) pod kątem 750+ gotowych reguł bezpieczeństwa.
+- gitleaks/gitleaks-action@v2
+  przeszuka historii gita w poszukiwaniu wyciekniętych sekretów (tokeny, klucze, hasła).
+- aquasecurity/trivy-action@master
+  Trivy: skanuje pliki na dysku (fs), obrazy Docker i repozytoria pod kątem CVE (HIGH/CRITICAL).
+- actions/upload-artifact@v4
+  zbiera wszystkie raporty (JSON, SARIF, HTML) z przebiegu i zapisuje je jako pliki do pobrania w UI GitHuba.
+- actions/setup-kustomize (wbudowany)
+  instaluje narzędzie Kustomize, dzięki któremu można podmienić wersje obrazów w manifestach K8s
+
 5. **Deploys to Kubernetes**
 
 ## 📈 Data Flow:
