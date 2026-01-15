@@ -163,14 +163,12 @@ jobs:
         continue-on-error: true
 
       # --- EXTRA OSS SAST ---
-      # Semgrep – szybki, wielojęzykowy linter/SAST z 2000+ wbudowanych reguł szukających podatności.
       - name: Semgrep SAST (multi-lang)
         run: |
           docker run --rm -v $(pwd):/src returntocorp/semgrep:latest \
             semgrep --config=auto --json --output=/src/semgrep-report.json /src
         continue-on-error: true
 
-      # PMD – dodatkowy statyczny linter dla Javy, znajduje źle napisany kod i potencjalne błędy.
       - name: PMD Java linter
         run: |
           docker run --rm -v $(pwd):/src pmd:latest \
@@ -199,7 +197,6 @@ jobs:
         continue-on-error: true
 
       # --- EXTRA IaC ---
-      # Kubescape – sprawdza manifesty K8s pod kątem polityk bezpieczeństwa NSA/CIS oraz OWASP K8s Top 10.
       - name: Kubescape K8s scan
         run: |
           docker run --rm -v $(pwd):/work quay.io/kubescape/kubescape:latest \
@@ -222,7 +219,6 @@ jobs:
         continue-on-error: true
 
       # --- EXTRA SECRETS ---
-      # TruffleHog pełna historia – przeszuka WSZYSTKIE commity w poszukiwaniu wyciekniętych sekretów.
       - name: TruffleHog full history
         run: |
           docker run --rm -v $(pwd):/repo trufflesecurity/trufflehog:latest \
@@ -256,13 +252,11 @@ jobs:
         continue-on-error: true
 
       # --- EXTRA SCA / SBOM ---
-      # CycloneDX – generuje dokładny SBOM (Software Bill of Materials) dla Javy, ułatwia audyt komponentów.
       - name: CycloneDX Java SBOM
         working-directory: ./java-app
         run: mvn org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
         continue-on-error: true
 
-      # Grype – skanuje obraz Docker pod kątem CVE na podstawie bazy Anchore; szybszy od Trivy w czystym trybie image.
       - name: Grype scan Python container
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/out \
@@ -328,7 +322,6 @@ jobs:
         continue-on-error: true
 
       # --- EXTRA DAST ---
-      # Nuclei – automatycznie sprawdza aplikację pod kątem 5000+ szablonów (CVE, OWASP, konfiguracje).
       - name: Nuclei CVE & OWASP scan
         run: |
           docker run --rm --network test-network \
@@ -337,7 +330,6 @@ jobs:
             -json-export /out/nuclei-report.json
         continue-on-error: true
 
-      # Nikto – klasyczny skaner web, szuka m.in. starego oprogramowania, ciekawych plików, bannerów.
       - name: Nikto scan
         run: |
           docker run --rm --network test-network \
