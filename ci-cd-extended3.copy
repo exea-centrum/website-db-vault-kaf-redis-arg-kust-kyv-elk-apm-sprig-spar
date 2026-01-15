@@ -162,19 +162,6 @@ jobs:
           fi
         continue-on-error: true
 
-      # --- EXTRA OSS SAST ---
-      - name: Semgrep SAST (multi-lang)
-        run: |
-          docker run --rm -v $(pwd):/src returntocorp/semgrep:latest \
-            semgrep --config=auto --json --output=/src/semgrep-report.json /src
-        continue-on-error: true
-
-      - name: PMD Java linter
-        run: |
-          docker run --rm -v $(pwd):/src pmd:latest \
-            bash -c "pmd check -d /src/java-app/src -R rulesets/java/quickstart.xml -f json > /src/pmd-report.json"
-        continue-on-error: true
-
       # --- INFRASTRUCTURE AS CODE (IaC) SCANNING ---
 
       - name: Run Checkov (IaC Security)
@@ -196,13 +183,6 @@ jobs:
           fi
         continue-on-error: true
 
-      # --- EXTRA IaC ---
-      - name: Kubescape K8s scan
-        run: |
-          docker run --rm -v $(pwd):/work quay.io/kubescape/kubescape:latest \
-            scan framework nsa /work/manifests --format json --output /work/kubescape-report.json
-        continue-on-error: true
-
       # --- SECRET SCANNING ---
 
       - name: Run TruffleHog secret scanning
@@ -216,13 +196,6 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-
-      # --- EXTRA SECRETS ---
-      - name: TruffleHog full history
-        run: |
-          docker run --rm -v $(pwd):/repo trufflesecurity/trufflehog:latest \
-            filesystem /repo --json > trufflehog-full.json
         continue-on-error: true
 
       # --- SCA (SOFTWARE COMPOSITION ANALYSIS) ---
@@ -249,20 +222,6 @@ jobs:
           if [ -f "pom.xml" ]; then
             mvn org.owasp:dependency-check-maven:check -Dformat=HTML || true
           fi
-        continue-on-error: true
-
-      # --- EXTRA SCA / SBOM ---
-      - name: CycloneDX Java SBOM
-        working-directory: ./java-app
-        run: mvn org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
-        continue-on-error: true
-
-      - name: Grype scan Python container
-        run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/out \
-            anchore/grype:latest \
-            ghcr.io/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar:${{ github.sha }} \
-            -o json > grype-python.json
         continue-on-error: true
 
       # --- CONTAINER SECURITY & SBOM ---
@@ -294,7 +253,7 @@ jobs:
 
       - name: Generate SBOM (Syft)
         run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh  | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
           syft ghcr.io/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar:${{ github.sha }} -o json > sbom-python.json
           syft ghcr.io/exea-centrum/website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar-spring:${{ github.sha }} -o json > sbom-spring.json
         continue-on-error: true
@@ -321,22 +280,6 @@ jobs:
             -x zap-report.xml || true
         continue-on-error: true
 
-      # --- EXTRA DAST ---
-      - name: Nuclei CVE & OWASP scan
-        run: |
-          docker run --rm --network test-network \
-            -v $(pwd):/out projectdiscovery/nuclei:latest \
-            -u http://test-fastapi:8080 \
-            -json-export /out/nuclei-report.json
-        continue-on-error: true
-
-      - name: Nikto scan
-        run: |
-          docker run --rm --network test-network \
-            -v $(pwd):/out sullo/nikto:latest \
-            -h test-fastapi -Format json -o /out/nikto-report.json
-        continue-on-error: true
-
       - name: Cleanup test services
         run: |
           docker stop test-fastapi || true
@@ -358,13 +301,6 @@ jobs:
             sbom-*.json
             results_checkov/
             ./java-app/target/dependency-check-report.html
-            semgrep-report.json
-            pmd-report.json
-            kubescape-report.json
-            trufflehog-full.json
-            grype-python.json
-            nuclei-report.json
-            nikto-report.json
 
   deploy:
     runs-on: ubuntu-latest
