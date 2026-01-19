@@ -1,61 +1,209 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: kibana
-  namespace: davtroelkpyjs
-  labels:
-    app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
-    component: kibana
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
-      component: kibana
-  template:
-    metadata:
-      labels:
-        app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
-        component: kibana
-    spec:
-      containers:
-        - name: kibana
-          image: kibana:8.10.2
-          ports:
-            - containerPort: 5601
-          env:
-            - name: ELASTICSEARCH_HOSTS
-              value: "http://elasticsearch:9200"
-            - name: XPACK_MONITORING_ENABLED
-              value: "true"
-            - name: XPACK_SECURITY_ENABLED
-              value: "false"
-          resources:
-            requests:
-              cpu: "200m"
-              memory: "512Mi"
-            limits:
-              cpu: "500m"
-              memory: "1Gi"
-          readinessProbe:
-            httpGet:
-              path: /api/status
-              port: 5601
-            initialDelaySeconds: 60
-            periodSeconds: 10
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kibana
-  namespace: davtroelkpyjs
-  labels:
-    app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
-    component: kibana
-spec:
-  ports:
-    - port: 5601
-      targetPort: 5601
-  selector:
-    app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
-    component: kibana
+#!/bin/bash
+
+# Skrypt do analizy i sugerowania nowych limitów zasobów
+# na podstawie outputu `kubectl get pods --all-namespaces`
+
+set -e
+
+# Funkcja do parsowania outputu kubectl
+analizuj_i_sugeruj_limity() {
+    local input_file=$1
+    local procent_zmniejszenia=${2:-50}
+    
+    echo "Analiza zasobów i sugerowanie nowych limitów (zmniejszenie o ${procent_zmniejszenia}%)"
+    echo "==================================================================================="
+    
+    # Główna pętla przetwarzająca linie z zasobami
+    awk -v procent=$procent_zmniejszenia '
+    BEGIN {
+        print "NAMESPACE\tPOD_NAME\tCOMPONENT\tSUGGESTED_REQUESTS\tSUGGESTED_LIMITS"
+        print "---------\t--------\t---------\t------------------\t---------------"
+    }
+    
+    # Szukamy linii z namespace davtroelkpyjs
+    /^[[:space:]]*davtroelkpyjs[[:space:]]/ {
+        namespace = $1
+        pod_name = $2
+        
+        # Ekstrakcja nazwy komponentu (usuń sufiksy -xxx)
+        component = pod_name
+        sub(/-[0-9a-z]+(-[0-9a-z]+)*$/, "", component)
+        sub(/-[0-9]+$/, "", component)  # usuń numer poda
+        
+        # Parsowanie zasobów z linii
+        cpu_req = $3
+        cpu_lim = $4
+        mem_req = $5
+        mem_lim = $6
+        
+        # Konwersja na liczby
+        gsub(/[^0-9.]/, "", cpu_req)
+        gsub(/[^0-9.]/, "", cpu_lim)
+        gsub(/[^0-9.]/, "", mem_req)
+        gsub(/[^0-9.]/, "", mem_lim)
+        
+        # Jeśli wartości są w milicores, konwertuj na dziesiętne
+        if (cpu_req ~ /m$/) cpu_req = cpu_req / 1000
+        if (cpu_lim ~ /m$/) cpu_lim = cpu_lim / 1000
+        
+        # Obliczanie nowych wartości
+        mnoznik = (100 - procent) / 100
+        
+        # Sugerowane wartości (z minimalnymi limitami)
+        if (cpu_req > 0) {
+            new_cpu_req = cpu_req * mnoznik
+            if (new_cpu_req < 0.05) new_cpu_req = 0.05  # min 50m
+        } else {
+            new_cpu_req = 0.05  # default min
+        }
+        
+        if (cpu_lim > 0) {
+            new_cpu_lim = cpu_lim * mnoznik
+            if (new_cpu_lim < 0.1) new_cpu_lim = 0.1  # min 100m
+        } else {
+            new_cpu_lim = 0.1  # default min
+        }
+        
+        # Konwersja pamięci Mi -> liczby
+        if (mem_req > 0) {
+            new_mem_req = int(mem_req * mnoznik)
+            if (new_mem_req < 32) new_mem_req = 32  # min 32Mi
+        } else {
+            new_mem_req = 64  # default min
+        }
+        
+        if (mem_lim > 0) {
+            new_mem_lim = int(mem_lim * mnoznik)
+            if (new_mem_lim < 64) new_mem_lim = 64  # min 64Mi
+        } else {
+            new_mem_lim = 128  # default min
+        }
+        
+        # Formatowanie wyjścia
+        suggested_requests = sprintf("cpu: \"%.0fm\", memory: \"%dMi\"", 
+                                     new_cpu_req * 1000, new_mem_req)
+        suggested_limits = sprintf("cpu: \"%.0fm\", memory: \"%dMi\"", 
+                                   new_cpu_lim * 1000, new_mem_lim)
+        
+        printf "%s\t%s\t%s\t%s\t%s\n", 
+               namespace, pod_name, component, suggested_requests, suggested_limits
+    }
+    ' "$input_file"
+}
+
+# Funkcja do generowania fragmentów YAML
+generuj_yaml_fragmenty() {
+    local input_file=$1
+    local procent_zmniejszenia=${2:-50}
+    
+    echo -e "\nGenerowanie fragmentów YAML do wklejenia:"
+    echo "==============================================="
+    
+    awk -v procent=$procent_zmniejszenia '
+    BEGIN {
+        print "---"
+    }
+    
+    /^[[:space:]]*davtroelkpyjs[[:space:]]/ && !/create-kafka-topics/ {
+        pod_name = $2
+        
+        # Ekstrakcja nazwy deployment/statefulset
+        resource_name = pod_name
+        sub(/-[0-9a-z]+(-[0-9a-z]+)*$/, "", resource_name)
+        sub(/-[0-9]+$/, "", resource_name)
+        
+        # Parsowanie zasobów
+        cpu_req = $3
+        cpu_lim = $4
+        mem_req = $5
+        mem_lim = $6
+        
+        # Konwersja na liczby
+        gsub(/[^0-9.]/, "", cpu_req)
+        gsub(/[^0-9.]/, "", cpu_lim)
+        gsub(/[^0-9.]/, "", mem_req)
+        gsub(/[^0-9.]/, "", mem_lim)
+        
+        # Jeśli wartości są w milicores, konwertuj na dziesiętne
+        if (cpu_req ~ /m$/) cpu_req = cpu_req / 1000
+        if (cpu_lim ~ /m$/) cpu_lim = cpu_lim / 1000
+        
+        # Obliczanie nowych wartości
+        mnoznik = (100 - procent) / 100
+        
+        # Sugerowane wartości z minimalnymi limitami
+        new_cpu_req = (cpu_req > 0) ? cpu_req * mnoznik : 0.05
+        new_cpu_lim = (cpu_lim > 0) ? cpu_lim * mnoznik : 0.1
+        new_mem_req = (mem_req > 0) ? int(mem_req * mnoznik) : 64
+        new_mem_lim = (mem_lim > 0) ? int(mem_lim * mnoznik) : 128
+        
+        # Ustawienie minimalnych wartości
+        if (new_cpu_req < 0.05) new_cpu_req = 0.05
+        if (new_cpu_lim < 0.1) new_cpu_lim = 0.1
+        if (new_mem_req < 32) new_mem_req = 32
+        if (new_mem_lim < 64) new_mem_lim = 64
+        
+        # Dla spark-worker dajemy wyższe limity
+        if (resource_name == "spark-worker") {
+            new_cpu_req = 0.5  # 500m
+            new_cpu_lim = 1    # 1000m
+            new_mem_req = 1024 # 1Gi
+            new_mem_lim = 2048 # 2Gi
+        }
+        
+        # Dla prometheus
+        if (resource_name == "prometheus") {
+            new_cpu_req = 0.25  # 250m
+            new_cpu_lim = 0.5   # 500m
+            new_mem_req = 512   # 512Mi
+            new_mem_lim = 1024  # 1Gi
+        }
+        
+        # Generowanie fragmentu YAML
+        printf "\n# %s\n", resource_name
+        printf "resources:\n"
+        printf "  requests:\n"
+        printf "    cpu: \"%.0fm\"\n", new_cpu_req * 1000
+        printf "    memory: \"%dMi\"\n", new_mem_req
+        printf "  limits:\n"
+        printf "    cpu: \"%.0fm\"\n", new_cpu_lim * 1000
+        printf "    memory: \"%dMi\"\n", new_mem_lim
+        print "---"
+    }
+    ' "$input_file"
+}
+
+# Główna logika
+main() {
+    if [ $# -lt 1 ]; then
+        echo "Użycie: $0 <plik_z_output_kubectl> [procent_zmniejszenia]"
+        echo "Przykład: $0 kubectl-output.txt 50"
+        echo "Przykład: $0 kubectl-output.txt 30"
+        echo ""
+        echo "Jak uzyskać dane:"
+        echo "kubectl get pods --all-namespaces --no-headers > kubectl-output.txt"
+        exit 1
+    fi
+    
+    local input_file=$1
+    local procent=${2:-50}
+    
+    if [ ! -f "$input_file" ]; then
+        echo "Błąd: Plik $input_file nie istnieje"
+        exit 1
+    fi
+    
+    # Analiza
+    analizuj_i_sugeruj_limity "$input_file" "$procent"
+    
+    # Generowanie YAML
+    generuj_yaml_fragmenty "$input_file" "$procent"
+    
+    echo -e "\nInstrukcja użycia:"
+    echo "1. Skopiuj powyższe fragmenty resources do odpowiednich plików YAML"
+    echo "2. Zastosuj zmiany: kubectl apply -f <plik.yaml>"
+    echo "3. Monitoruj: kubectl get pods -n davtroelkpyjs"
+}
+
+# Uruchom
+main "$@"

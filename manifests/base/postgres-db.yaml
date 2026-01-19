@@ -11,8 +11,8 @@ metadata:
     app.kubernetes.io/component: postgres
 spec:
   ports:
-  - port: 5432
-    name: postgres
+    - port: 5432
+      name: postgres
   selector:
     app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
     component: postgres
@@ -50,46 +50,46 @@ spec:
         runAsUser: 999
         runAsNonRoot: true
       containers:
-      - name: postgres
-        image: postgres:15-alpine
-        env:
-        - name: POSTGRES_USER
-          value: "webuser"
-        - name: POSTGRES_PASSWORD
-          value: "testpassword"
-        - name: POSTGRES_DB
-          value: "webdb"
-        - name: PGDATA
-          value: "/var/lib/postgresql/data/pgdata"
-        ports:
-        - containerPort: 5432
-          name: postgres
-        volumeMounts:
-        - name: postgres-data
-          mountPath: /var/lib/postgresql/data
-          subPath: pgdata
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_USER
+              value: "webuser"
+            - name: POSTGRES_PASSWORD
+              value: "testpassword"
+            - name: POSTGRES_DB
+              value: "webdb"
+            - name: PGDATA
+              value: "/var/lib/postgresql/data/pgdata"
+          ports:
+            - containerPort: 5432
+              name: postgres
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "webuser", "-d", "webdb"]
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "webuser", "-d", "webdb"]
+            initialDelaySeconds: 30
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            cpu: "200m"
-            memory: "256Mi"
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
-        livenessProbe:
-          exec:
-            command: ["pg_isready", "-U", "webuser", "-d", "webdb"]
-          initialDelaySeconds: 60
-          periodSeconds: 10
-        readinessProbe:
-          exec:
-            command: ["pg_isready", "-U", "webuser", "-d", "webdb"]
-          initialDelaySeconds: 30
-          periodSeconds: 5
-  volumeClaimTemplates:
-  - metadata:
-      name: postgres-data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 10Gi
+            storage: 10Gi

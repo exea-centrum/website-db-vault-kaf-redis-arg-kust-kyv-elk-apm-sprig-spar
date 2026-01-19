@@ -21,7 +21,7 @@ spec:
       initContainers:
         - name: wait-for-kafka
           image: confluentinc/cp-kafka:7.5.0
-          command: 
+          command:
             - sh
             - -c
             - |
@@ -31,7 +31,14 @@ spec:
               done
         - name: wait-for-mongodb
           image: mongo:7.0
-          command: ['mongosh', '--host', 'mongodb', '--eval', 'db.adminCommand("ping")']
+          command:
+            [
+              "mongosh",
+              "--host",
+              "mongodb",
+              "--eval",
+              'db.adminCommand("ping")',
+            ]
       containers:
         - name: spark-master
           image: bitnami/spark:3.4.0
@@ -61,11 +68,11 @@ spec:
               value: "no"
           resources:
             requests:
-              cpu: "500m"
-              memory: "2Gi"
+              cpu: "100m"
+              memory: "128Mi"
             limits:
-              cpu: "2000m"
-              memory: "4Gi"
+              cpu: "200m"
+              memory: "256Mi"
           readinessProbe:
             tcpSocket:
               port: 7077

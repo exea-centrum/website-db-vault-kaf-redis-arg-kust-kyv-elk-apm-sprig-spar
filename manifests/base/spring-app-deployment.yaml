@@ -21,10 +21,17 @@ spec:
       initContainers:
         - name: wait-for-mongodb
           image: mongo:7.0
-          command: ['mongosh', '--host', 'mongodb', '--eval', 'db.adminCommand("ping")']
+          command:
+            [
+              "mongosh",
+              "--host",
+              "mongodb",
+              "--eval",
+              'db.adminCommand("ping")',
+            ]
         - name: wait-for-kafka
           image: confluentinc/cp-kafka:7.5.0
-          command: 
+          command:
             - sh
             - -c
             - |
@@ -34,7 +41,7 @@ spec:
               done
         - name: wait-for-elasticsearch
           image: busybox:1.35
-          command: 
+          command:
             - sh
             - -c
             - |
@@ -60,11 +67,12 @@ spec:
               value: "-Xms512m -Xmx512m -XX:+UseG1GC"
           resources:
             requests:
-              cpu: "500m"
-              memory: "1Gi"
-            limits:
-              cpu: "1000m"
-              memory: "2Gi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
           livenessProbe:
             httpGet:
               path: /actuator/health
@@ -121,7 +129,7 @@ data:
           value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
           properties:
             spring.json.trusted.packages: "*"
-    
+
     management:
       endpoints:
         web:
@@ -131,16 +139,16 @@ data:
         export:
           prometheus:
             enabled: true
-    
+
     logging:
       level:
         com.davtroweb: DEBUG
       file:
         name: /var/log/spring-app.log
-    
+
     elk:
       elasticsearch-url: http://elasticsearch:9200
       logstash-url: http://logstash:5000
-    
+
     spark:
       master-url: spark://spark-master:7077

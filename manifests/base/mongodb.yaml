@@ -34,11 +34,11 @@ spec:
               mountPath: /data/db
           resources:
             requests:
-              cpu: "500m"
-              memory: "1Gi"
+              cpu: "100m"
+              memory: "128Mi"
             limits:
-              cpu: "1000m"
-              memory: "2Gi"
+              cpu: "200m"
+            memory: "256Mi"
           readinessProbe:
             exec:
               command:
@@ -83,7 +83,7 @@ metadata:
 data:
   init.js: |
     db = db.getSiblingDB('survey_db');
-    
+
     db.createUser({
       user: 'survey_user',
       pwd: 'survey_password',
@@ -92,12 +92,12 @@ data:
         { role: 'readWrite', db: 'survey_analytics' }
       ]
     });
-    
+
     db.createCollection('survey_responses');
     db.survey_responses.createIndex({ surveyId: 1 });
     db.survey_responses.createIndex({ submittedAt: -1 });
     db.survey_responses.createIndex({ userId: 1 });
-    
+
     db = db.getSiblingDB('survey_analytics');
     db.createCollection('text_analysis');
     db.createCollection('rating_analysis');
@@ -106,7 +106,7 @@ data:
     db.createCollection('tech_trends');
     db.createCollection('correlations');
     db.createCollection('hourly_report');
-    
+
     print('MongoDB initialized successfully');
 ---
 apiVersion: batch/v1
@@ -128,11 +128,18 @@ spec:
       initContainers:
         - name: wait-for-mongodb
           image: mongo:7.0
-          command: ['mongosh', '--host', 'mongodb', '--eval', 'db.adminCommand("ping")']
+          command:
+            [
+              "mongosh",
+              "--host",
+              "mongodb",
+              "--eval",
+              'db.adminCommand("ping")',
+            ]
       containers:
         - name: init
           image: mongo:7.0
-          command: 
+          command:
             - mongosh
             - --host
             - mongodb

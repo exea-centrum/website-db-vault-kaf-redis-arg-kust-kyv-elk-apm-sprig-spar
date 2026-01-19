@@ -36,11 +36,11 @@ spec:
               mountPath: /usr/share/logstash/pipeline/
           resources:
             requests:
-              cpu: "200m"
-              memory: "512Mi"
+              cpu: "100m"
+              memory: "128Mi"
             limits:
-              cpu: "500m"
-              memory: "1Gi"
+              cpu: "200m"
+              memory: "256Mi"
           readinessProbe:
             tcpSocket:
               port: 9600
@@ -74,7 +74,7 @@ data:
         port => 5044
       }
     }
-    
+
     filter {
       if [type] == "survey" {
         mutate {
@@ -105,7 +105,7 @@ data:
         remove_field => [ "timestamp" ]
       }
     }
-    
+
     output {
       elasticsearch {
         hosts => ["elasticsearch:9200"]

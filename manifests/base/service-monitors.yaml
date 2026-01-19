@@ -13,9 +13,9 @@ spec:
       app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
       component: fastapi
   endpoints:
-  - port: http
-    path: /metrics
-    interval: 15s
+    - port: http
+      path: /metrics
+      interval: 15s
 
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -33,8 +33,8 @@ spec:
       app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
       component: redis
   endpoints:
-  - port: redis
-    interval: 30s
+    - port: redis
+      interval: 30s
 
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -52,8 +52,8 @@ spec:
       app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
       component: postgres-exporter
   endpoints:
-  - port: http
-    interval: 30s
+    - port: http
+      interval: 30s
 
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -71,8 +71,8 @@ spec:
       app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
       component: kafka-exporter
   endpoints:
-  - port: http
-    interval: 30s
+    - port: http
+      interval: 30s
 
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -90,5 +90,5 @@ spec:
       app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
       component: node-exporter
   endpoints:
-  - port: http
-    interval: 30s
+    - port: http
+      interval: 30s

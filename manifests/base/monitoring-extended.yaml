@@ -54,6 +54,7 @@ spec:
     app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
     component: mongodb-exporter
 
+
 # ServiceMonitor dla MongoDB
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -69,8 +70,9 @@ spec:
       app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
       component: mongodb-exporter
   endpoints:
-  - port: http
-    interval: 30s
+    - port: http
+      interval: 30s
+
 
 # ServiceMonitor dla Spring Boot
 ---
@@ -87,9 +89,10 @@ spec:
       app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
       component: spring-app
   endpoints:
-  - port: http
-    path: /actuator/prometheus
-    interval: 15s
+    - port: http
+      path: /actuator/prometheus
+      interval: 15s
+
 
 # ServiceMonitor dla Elasticsearch
 ---
@@ -106,9 +109,10 @@ spec:
       app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
       component: elasticsearch
   endpoints:
-  - port: http
-    path: /_prometheus/metrics
-    interval: 30s
+    - port: http
+      path: /_prometheus/metrics
+      interval: 30s
+
 
 # Dodatkowe dashbordy Grafana
 ---
@@ -136,7 +140,7 @@ data:
         ]
       }
     }
-  
+
   spark-dashboard.json: |-
     {
       "dashboard": {
@@ -155,7 +159,7 @@ data:
         ]
       }
     }
-  
+
   mongodb-dashboard.json: |-
     {
       "dashboard": {
@@ -174,7 +178,7 @@ data:
         ]
       }
     }
-  
+
   elk-dashboard.json: |-
     {
       "dashboard": {

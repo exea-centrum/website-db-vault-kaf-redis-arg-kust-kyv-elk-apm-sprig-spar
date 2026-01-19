@@ -34,7 +34,7 @@ resources:
   - kafka-ui.yaml
   - network-policies.yaml
   - kyverno-policy.yaml
-  
+
   # Nowe zasoby
   - mongodb.yaml
   - elasticsearch.yaml
@@ -52,6 +52,5 @@ commonLabels:
   app.kubernetes.io/name: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
   app.kubernetes.io/instance: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
   app.kubernetes.io/managed-by: kustomize
-
 # Zmienne (usunięte — nieużywane i powodowały błąd mapowania)
 # vars were removed because no resources contained placeholders for them

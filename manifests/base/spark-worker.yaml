@@ -21,7 +21,7 @@ spec:
       initContainers:
         - name: wait-for-spark-master
           image: busybox:1.35
-          command: 
+          command:
             - sh
             - -c
             - |
@@ -56,11 +56,11 @@ spec:
               value: "no"
           resources:
             requests:
-              cpu: "1000m"
-              memory: "2Gi"
+              cpu: "100m"
+              memory: "128Mi"
             limits:
-              cpu: "2000m"
-              memory: "4Gi"
+              cpu: "200m"
+              memory: "256Mi"
           readinessProbe:
             tcpSocket:
               port: 8081

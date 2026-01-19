@@ -25,36 +25,36 @@ spec:
         app.kubernetes.io/component: prometheus
     spec:
       containers:
-      - name: prometheus
-        image: prom/prometheus:v2.48.0
-        ports:
-        - containerPort: 9090
-        volumeMounts:
-        - name: config
-          mountPath: /etc/prometheus
-        - name: data
-          mountPath: /prometheus
-        resources:
-          requests:
-            cpu: "500m"
-            memory: "1Gi"
-          limits:
-            cpu: "1000m"
-            memory: "2Gi"
-        args:
-        - '--config.file=/etc/prometheus/prometheus.yml'
-        - '--storage.tsdb.path=/prometheus'
-        - '--web.console.libraries=/etc/prometheus/console_libraries'
-        - '--web.console.templates=/etc/prometheus/consoles'
-        - '--storage.tsdb.retention.time=200h'
-        - '--web.enable-lifecycle'
+        - name: prometheus
+          image: prom/prometheus:v2.48.0
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: data
+              mountPath: /prometheus
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--web.console.libraries=/etc/prometheus/console_libraries"
+            - "--web.console.templates=/etc/prometheus/consoles"
+            - "--storage.tsdb.retention.time=200h"
+            - "--web.enable-lifecycle"
       volumes:
-      - name: config
-        configMap:
-          name: prometheus-config
-      - name: data
-        persistentVolumeClaim:
-          claimName: prometheus-data
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: prometheus-data
 ---
 apiVersion: v1
 kind: Service
@@ -69,9 +69,9 @@ metadata:
     app.kubernetes.io/component: prometheus
 spec:
   ports:
-  - port: 9090
-    targetPort: 9090
-    protocol: TCP
+    - port: 9090
+      targetPort: 9090
+      protocol: TCP
   selector:
     app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
     component: prometheus
@@ -87,7 +87,7 @@ metadata:
     app.kubernetes.io/instance: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
 spec:
   accessModes:
-  - ReadWriteOnce
+    - ReadWriteOnce
   resources:
     requests:
       storage: 20Gi

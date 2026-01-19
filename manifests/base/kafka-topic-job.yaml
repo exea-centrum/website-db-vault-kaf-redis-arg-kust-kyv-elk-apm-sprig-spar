@@ -49,11 +49,11 @@ spec:
             - |
               set -e
               echo "Creating Kafka topics..."
-              
+
               /opt/confluent/bin/kafka-topics --create                 --bootstrap-server kafka-0.kafka.davtroelkpyjs.svc.cluster.local:9092                 --topic survey-topic                 --partitions 3                 --replication-factor 1                 --config retention.ms=604800000                 --config min.insync.replicas=1                 --if-not-exists
-              
+
               echo "Verifying topics..."
               /opt/confluent/bin/kafka-topics --list                 --bootstrap-server kafka-0.kafka.davtroelkpyjs.svc.cluster.local:9092
-              
+
               echo "✓ Kafka topics created successfully"
       restartPolicy: OnFailure
