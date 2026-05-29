@@ -233,3 +233,97 @@ kubectl rollout restart deployment/spring-app -n davtroelkpyjs
 - [Apache Spark Documentation](https://spark.apache.org/docs/latest/)
 - [ELK Stack Documentation](https://www.elastic.co/guide/index.html)
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
+# 🔹 Opcja 1 — włącz uprawnienia zapisu dla GITHUB_TOKEN
+
+To najczystsze rozwiązanie.
+
+Wejdź do repo:
+👉 Settings → Actions → General → Workflow permissions
+
+Zaznacz:
+✅ Read and write permissions
+
+Zapisz ustawienia.
+
+Uruchom ponownie workflow (możesz zrobić git commit --allow-empty -m "retry" i push, żeby go wymusić).
+
+To wystarczy — github-actions[bot] wtedy będzie mógł git push.
+
+🔹 Opcja 2 — użyj personalnego tokena (PAT)
+
+Jeśli nie chcesz zmieniać globalnych uprawnień, możesz użyć sekreta z Twoim PAT-em.
+
+Utwórz PAT z zakresem:
+
+repo
+
+workflow
+
+write:packages
+
+W repo GitHub → Settings → Secrets → Actions
+
+utwórz sekret o nazwie GHCR_PAT (można użyć tego samego co do GHCR).
+
+W workflow zamień:
+
+Upewnij się, że istnieje sekret w namespace davtrokyverno01
+
+Utwórz go w microk8s:
+
+```bash
+microk8s kubectl create secret docker-registry ghcr-secret \
+  --docker-server=ghcr.io \
+  --docker-username=exea-centrum \
+  --docker-password=ghp_NT.....<twój_PAT_z_uprawnieniami_read:packages> \
+  --docker-email=exea-centrum@gmail.com \
+  --namespace davtroelkpyjs
+```
+## **🐋 2\. Poprawiony GitHub Actions workflow**
+
+Oryginalny workflow działał, ale miał kilka błędów i braków bezpieczeństwa.
+
+### **🔹 Było:**
+
+`permissions:`  
+ `contents: write`  
+ `packages: write`
+
+👉 **Za wysoko (w `jobs` powinno być, nie globalnie)**  
+ 👉 Zbyt szerokie uprawnienia.
+
+### **🔹 Teraz:**
+
+`permissions:`  
+ `contents: read`  
+ `packages: write`
+
+✅ **Dlaczego:**  
+ To minimalne i zalecane uprawnienia do publikowania obrazów w GHCR.  
+ Dodatkowo — przeniosłem je do poziomu **globalnego** (poprawna składnia YAML GitHub Actions).
+
+---
+### **1\. Przygotowanie MicroK8s**
+
+1. Sprawdź status MicroK8s:  
+   bash
+
+```console
+   microk8s status \--wait-ready
+```
+
+2. Włącz moduły dns , ingress i registry:  
+   bash
+
+```console
+   microk8s enable dns ingress registry
+```
+
+3. Włącz ArgoCD:  
+   bash
+
+```console
+   microk8s enable argocd
+```
+
+
