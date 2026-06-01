@@ -327,6 +327,7 @@ Oryginalny workflow działał, ale miał kilka błędów i braków bezpieczeńst
 ```
 
 ```console
+
 microk8s enable argocd
 Infer repository community for addon argocd
 Infer repository core for addon helm3
