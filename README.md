@@ -233,6 +233,9 @@ kubectl rollout restart deployment/spring-app -n davtroelkpyjs
 - [Apache Spark Documentation](https://spark.apache.org/docs/latest/)
 - [ELK Stack Documentation](https://www.elastic.co/guide/index.html)
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
+
+
+
 # 🔹 Opcja 1 — włącz uprawnienia zapisu dla GITHUB_TOKEN
 
 To najczystsze rozwiązanie.
@@ -303,20 +306,27 @@ Oryginalny workflow działał, ale miał kilka błędów i braków bezpieczeńst
  Dodatkowo — przeniosłem je do poziomu **globalnego** (poprawna składnia YAML GitHub Actions).
 
 ---
+# 🔹 Przygotowanie MicroK8s i ArgoCD 
 ### **1\. Przygotowanie MicroK8s**
 
-1. Sprawdź status MicroK8s:  
+1. Sprawdź status MicroK8s + k9s:  
    bash
 
 ```console
+   sudo snap install microk8s --classic
+   microk8s enable dashboard
    microk8s status \--wait-ready
+   newgrp microk8s
+   mkdir -p ~/.kube
+   sudo chown -R david:microk8s ~/.kube
+   snap install k9s
 ```
 
-2. Włącz moduły dns , ingress i registry:  
+2. Włącz moduły dns, istio, ingress i registry:  
    bash
 
 ```console
-   microk8s enable dns ingress registry
+   microk8s enable dns ingress registry istio
 ```
 
 3. Włącz ArgoCD:  
@@ -361,3 +371,67 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 ArgoCD is installed
 
 ```
+4. Więcej przydatynych skryptów w https://github.com/exea-centrum/DavTro--->CLI-history-tools:
+   https://github.com/exea-centrum/k8s-learn-explanation/tree/main/cli-tools-trick-tips  
+   bash
+
+```console
+   #!/bin/bash
+
+# Sprawdzenie, czy microk8s jest uruchomiony
+if ! microk8s status --wait-ready >/dev/null 2>&1; then
+    echo "❌ Błąd: Microk8s nie jest uruchomiony. Uruchom najpierw: microk8s start"
+    exit 1
+fi
+
+echo "✅ Microk8s działa poprawnie."
+echo "--------------------------------------------------"
+
+# Generowanie tokenu dla Kubernetes Dashboard (Zamiast szukania starego sekretu)
+echo "🔑 Generowanie tokenu dostępu do Kubernetes Dashboard..."
+token=$(microk8s kubectl -n kubernetes-dashboard create token default 2>/dev/null)
+
+if [ -z "$token" ]; then
+    echo "❌ Błąd: Nie udało się wygenerować tokenu dla Dashboardu."
+    exit 1
+else
+    echo "📋 TWÓJ TOKEN DO DASHBOARDU (skopiuj go):"
+    echo "--------------------------------------------------"
+    echo "$token"
+    echo "--------------------------------------------------"
+fi
+
+# Pobranie i dekodowanie hasła ArgoCD
+echo "📦 Pobieranie hasła administratora ArgoCD..."
+argocd_pass=$(microk8s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d)
+
+if [ -z "$argocd_pass" ]; then
+    echo "⚠️  Ostrzeżenie: Nie znaleziono sekretu argocd-initial-admin-secret (może został już usunięty?)."
+else
+    echo "👤 Login: admin"
+    echo "🔒 Hasło: $argocd_pass"
+fi
+echo "--------------------------------------------------"
+
+# Przekierowanie portów dla Kubernetes Dashboard
+echo "🚀 Uruchamianie port-forward dla Kubernetes Dashboard (Port 10443)..."
+microk8s kubectl port-forward --address 0.0.0.0 -n kubernetes-dashboard service/kubernetes-dashboard 10443:443 >/dev/null 2>&1 &
+
+# Przekierowanie portów dla ArgoCD
+echo "🚀 Uruchamianie port-forward dla ArgoCD (Port 8080)..."
+microk8s kubectl port-forward --address 0.0.0.0 -n argocd service/argo-cd-argocd-server 8080:443 >/dev/null 2>&1 &
+
+echo "--------------------------------------------------"
+echo "🌐 Gotowe! Usługi są dostępne zewnętrznie pod adresami:"
+echo "   - Kubernetes Dashboard: https://IP_SERWERA:10443"
+echo "   - ArgoCD UI:            https://IP_SERWERA:8080"
+echo "--------------------------------------------------"
+echo "Naciśnij Ctrl+C, aby zakończyć przekierowanie portów i zamknąć skrypt."
+
+# Utrzymuje skrypt przy życiu, dopóki procesy w tle działają
+wait
+```   
+## ⚙️ Szybkie rozruch MicroK8s i ArgoCD 
+https://github.com/exea-centrum/website-argocd-k8s-githubactions-kustomize-kyverno03
+poniżej wiecej informacji ale mniej czytelniej
+https://github.com/exea-centrum/website-argocd-k8s-github-kustomize
