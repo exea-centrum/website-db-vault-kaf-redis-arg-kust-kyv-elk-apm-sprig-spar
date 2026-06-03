@@ -236,6 +236,149 @@ kubectl rollout restart deployment/spring-app -n davtroelkpyjs
 
 
 
+
+---
+# 🔹 Przygotowanie MicroK8s i ArgoCD 
+### **1\. Przygotowanie MicroK8s**
+
+1. Sprawdź status MicroK8s + k9s:  
+   bash
+
+```console
+   sudo snap install microk8s --classic
+   microk8s enable dashboard
+   microk8s status \--wait-ready
+   newgrp microk8s
+   mkdir -p ~/.kube
+   sudo chown -R david:microk8s ~/.kube
+   snap install k9s
+```
+
+2. Włącz moduły dns, istio, ingress i registry:  
+   bash
+
+```console
+   microk8s enable dns ingress registry istio
+```
+
+3. Włącz ArgoCD:  
+   bash
+
+```console
+   microk8s enable argocd
+```
+
+```console
+
+microk8s enable argocd
+Infer repository community for addon argocd
+Infer repository core for addon helm3
+Addon core/helm3 is already enabled
+Installing ArgoCD (Helm v5.34.3)
+"argo" has been added to your repositories
+Release "argo-cd" does not exist. Installing it now.
+NAME: argo-cd
+LAST DEPLOYED: Mon Jun  1 09:45:18 2026
+NAMESPACE: argocd
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+In order to access the server UI you have the following options:
+
+1. kubectl port-forward service/argo-cd-argocd-server -n argocd 8080:443
+
+    and then open the browser on http://localhost:8080 and accept the certificate
+
+2. enable ingress in the values file `server.ingress.enabled` and either
+      - Add the annotation for ssl passthrough: https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#option-1-ssl-passthrough
+      - Set the `configs.params."server.insecure"` in the values file and terminate SSL at your ingress: https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#option-2-multiple-ingress-objects-and-hosts
+
+
+After reaching the UI the first time you can login with username: admin and the random password generated during the installation. You can find the password by running:
+
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+(You should delete the initial secret afterwards as suggested by the Getting Started Guide: https://argo-cd.readthedocs.io/en/stable/getting_started/#4-login-using-the-cli)
+ArgoCD is installed
+
+```
+4. Utwórz secret w microk8s pod ArgoCD by mogło się synchronizować i pobierać z GitHub-a CI/CD:
+
+```bash
+microk8s kubectl create secret docker-registry ghcr-secret \
+  --docker-server=ghcr.io \
+  --docker-username=exea-centrum \
+  --docker-password=ghp_NT.....<twój_PAT_z_uprawnieniami_read:packages> \
+  --docker-email=exea-centrum@gmail.com \
+  --namespace davtroelkpyjs
+```
+
+5. Więcej przydatynych skryptów w https://github.com/exea-centrum/DavTro--->CLI-history-tools:
+   https://github.com/exea-centrum/k8s-learn-explanation/tree/main/cli-tools-trick-tips  
+   bash
+
+```console
+   #!/bin/bash
+
+# Sprawdzenie, czy microk8s jest uruchomiony
+if ! microk8s status --wait-ready >/dev/null 2>&1; then
+    echo "❌ Błąd: Microk8s nie jest uruchomiony. Uruchom najpierw: microk8s start"
+    exit 1
+fi
+
+echo "✅ Microk8s działa poprawnie."
+echo "--------------------------------------------------"
+
+# Generowanie tokenu dla Kubernetes Dashboard (Zamiast szukania starego sekretu)
+echo "🔑 Generowanie tokenu dostępu do Kubernetes Dashboard..."
+token=$(microk8s kubectl -n kubernetes-dashboard create token default 2>/dev/null)
+
+if [ -z "$token" ]; then
+    echo "❌ Błąd: Nie udało się wygenerować tokenu dla Dashboardu."
+    exit 1
+else
+    echo "📋 TWÓJ TOKEN DO DASHBOARDU (skopiuj go):"
+    echo "--------------------------------------------------"
+    echo "$token"
+    echo "--------------------------------------------------"
+fi
+
+# Pobranie i dekodowanie hasła ArgoCD
+echo "📦 Pobieranie hasła administratora ArgoCD..."
+argocd_pass=$(microk8s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d)
+
+if [ -z "$argocd_pass" ]; then
+    echo "⚠️  Ostrzeżenie: Nie znaleziono sekretu argocd-initial-admin-secret (może został już usunięty?)."
+else
+    echo "👤 Login: admin"
+    echo "🔒 Hasło: $argocd_pass"
+fi
+echo "--------------------------------------------------"
+
+# Przekierowanie portów dla Kubernetes Dashboard
+echo "🚀 Uruchamianie port-forward dla Kubernetes Dashboard (Port 10443)..."
+microk8s kubectl port-forward --address 0.0.0.0 -n kubernetes-dashboard service/kubernetes-dashboard 10443:443 >/dev/null 2>&1 &
+
+# Przekierowanie portów dla ArgoCD
+echo "🚀 Uruchamianie port-forward dla ArgoCD (Port 8080)..."
+microk8s kubectl port-forward --address 0.0.0.0 -n argocd service/argo-cd-argocd-server 8080:443 >/dev/null 2>&1 &
+
+echo "--------------------------------------------------"
+echo "🌐 Gotowe! Usługi są dostępne zewnętrznie pod adresami:"
+echo "   - Kubernetes Dashboard: https://IP_SERWERA:10443"
+echo "   - ArgoCD UI:            https://IP_SERWERA:8080"
+echo "--------------------------------------------------"
+echo "Naciśnij Ctrl+C, aby zakończyć przekierowanie portów i zamknąć skrypt."
+
+# Utrzymuje skrypt przy życiu, dopóki procesy w tle działają
+wait
+```   
+## ⚙️ Szybkie rozruch MicroK8s i ArgoCD 
+https://github.com/exea-centrum/website-argocd-k8s-githubactions-kustomize-kyverno03
+poniżej wiecej informacji ale mniej czytelniej
+https://github.com/exea-centrum/website-argocd-k8s-github-kustomize
+
 # 🔹 Opcja 1 — włącz uprawnienia zapisu dla GITHUB_TOKEN
 
 To najczystsze rozwiązanie.
@@ -304,134 +447,3 @@ Oryginalny workflow działał, ale miał kilka błędów i braków bezpieczeńst
 ✅ **Dlaczego:**  
  To minimalne i zalecane uprawnienia do publikowania obrazów w GHCR.  
  Dodatkowo — przeniosłem je do poziomu **globalnego** (poprawna składnia YAML GitHub Actions).
-
----
-# 🔹 Przygotowanie MicroK8s i ArgoCD 
-### **1\. Przygotowanie MicroK8s**
-
-1. Sprawdź status MicroK8s + k9s:  
-   bash
-
-```console
-   sudo snap install microk8s --classic
-   microk8s enable dashboard
-   microk8s status \--wait-ready
-   newgrp microk8s
-   mkdir -p ~/.kube
-   sudo chown -R david:microk8s ~/.kube
-   snap install k9s
-```
-
-2. Włącz moduły dns, istio, ingress i registry:  
-   bash
-
-```console
-   microk8s enable dns ingress registry istio
-```
-
-3. Włącz ArgoCD:  
-   bash
-
-```console
-   microk8s enable argocd
-```
-
-```console
-
-microk8s enable argocd
-Infer repository community for addon argocd
-Infer repository core for addon helm3
-Addon core/helm3 is already enabled
-Installing ArgoCD (Helm v5.34.3)
-"argo" has been added to your repositories
-Release "argo-cd" does not exist. Installing it now.
-NAME: argo-cd
-LAST DEPLOYED: Mon Jun  1 09:45:18 2026
-NAMESPACE: argocd
-STATUS: deployed
-REVISION: 1
-TEST SUITE: None
-NOTES:
-In order to access the server UI you have the following options:
-
-1. kubectl port-forward service/argo-cd-argocd-server -n argocd 8080:443
-
-    and then open the browser on http://localhost:8080 and accept the certificate
-
-2. enable ingress in the values file `server.ingress.enabled` and either
-      - Add the annotation for ssl passthrough: https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#option-1-ssl-passthrough
-      - Set the `configs.params."server.insecure"` in the values file and terminate SSL at your ingress: https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#option-2-multiple-ingress-objects-and-hosts
-
-
-After reaching the UI the first time you can login with username: admin and the random password generated during the installation. You can find the password by running:
-
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
-
-(You should delete the initial secret afterwards as suggested by the Getting Started Guide: https://argo-cd.readthedocs.io/en/stable/getting_started/#4-login-using-the-cli)
-ArgoCD is installed
-
-```
-4. Więcej przydatynych skryptów w https://github.com/exea-centrum/DavTro--->CLI-history-tools:
-   https://github.com/exea-centrum/k8s-learn-explanation/tree/main/cli-tools-trick-tips  
-   bash
-
-```console
-   #!/bin/bash
-
-# Sprawdzenie, czy microk8s jest uruchomiony
-if ! microk8s status --wait-ready >/dev/null 2>&1; then
-    echo "❌ Błąd: Microk8s nie jest uruchomiony. Uruchom najpierw: microk8s start"
-    exit 1
-fi
-
-echo "✅ Microk8s działa poprawnie."
-echo "--------------------------------------------------"
-
-# Generowanie tokenu dla Kubernetes Dashboard (Zamiast szukania starego sekretu)
-echo "🔑 Generowanie tokenu dostępu do Kubernetes Dashboard..."
-token=$(microk8s kubectl -n kubernetes-dashboard create token default 2>/dev/null)
-
-if [ -z "$token" ]; then
-    echo "❌ Błąd: Nie udało się wygenerować tokenu dla Dashboardu."
-    exit 1
-else
-    echo "📋 TWÓJ TOKEN DO DASHBOARDU (skopiuj go):"
-    echo "--------------------------------------------------"
-    echo "$token"
-    echo "--------------------------------------------------"
-fi
-
-# Pobranie i dekodowanie hasła ArgoCD
-echo "📦 Pobieranie hasła administratora ArgoCD..."
-argocd_pass=$(microk8s kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d)
-
-if [ -z "$argocd_pass" ]; then
-    echo "⚠️  Ostrzeżenie: Nie znaleziono sekretu argocd-initial-admin-secret (może został już usunięty?)."
-else
-    echo "👤 Login: admin"
-    echo "🔒 Hasło: $argocd_pass"
-fi
-echo "--------------------------------------------------"
-
-# Przekierowanie portów dla Kubernetes Dashboard
-echo "🚀 Uruchamianie port-forward dla Kubernetes Dashboard (Port 10443)..."
-microk8s kubectl port-forward --address 0.0.0.0 -n kubernetes-dashboard service/kubernetes-dashboard 10443:443 >/dev/null 2>&1 &
-
-# Przekierowanie portów dla ArgoCD
-echo "🚀 Uruchamianie port-forward dla ArgoCD (Port 8080)..."
-microk8s kubectl port-forward --address 0.0.0.0 -n argocd service/argo-cd-argocd-server 8080:443 >/dev/null 2>&1 &
-
-echo "--------------------------------------------------"
-echo "🌐 Gotowe! Usługi są dostępne zewnętrznie pod adresami:"
-echo "   - Kubernetes Dashboard: https://IP_SERWERA:10443"
-echo "   - ArgoCD UI:            https://IP_SERWERA:8080"
-echo "--------------------------------------------------"
-echo "Naciśnij Ctrl+C, aby zakończyć przekierowanie portów i zamknąć skrypt."
-
-# Utrzymuje skrypt przy życiu, dopóki procesy w tle działają
-wait
-```   
-## ⚙️ Szybkie rozruch MicroK8s i ArgoCD 
-https://github.com/exea-centrum/website-argocd-k8s-githubactions-kustomize-kyverno03
-poniżej wiecej informacji ale mniej czytelniej
-https://github.com/exea-centrum/website-argocd-k8s-github-kustomize
