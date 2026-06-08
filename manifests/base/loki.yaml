@@ -29,8 +29,10 @@ spec:
         - name: loki
           image: grafana/loki:2.9.2
           ports:
-            - containerPort: 3100
-            - containerPort: 9096
+            - name: http         # Krok opcjonalny: dodane dla ładu w StatefulSet
+              containerPort: 3100
+            - name: grpc         # Krok opcjonalny: dodane dla ładu w StatefulSet
+              containerPort: 9096
           volumeMounts:
             - name: config
               mountPath: /etc/loki
@@ -66,10 +68,12 @@ metadata:
     app.kubernetes.io/component: loki
 spec:
   ports:
-    - port: 3100
+    - name: http         # <--- TUTAJ: Kluczowa poprawka (Required value)
+      port: 3100
       targetPort: 3100
       protocol: TCP
-    - port: 9096
+    - name: grpc         # <--- TUTAJ: Kluczowa poprawka (Required value)
+      port: 9096
       targetPort: 9096
       protocol: TCP
   selector:
