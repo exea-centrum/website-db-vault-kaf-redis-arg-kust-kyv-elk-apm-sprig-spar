@@ -131,3 +131,4 @@ metadata:
     app: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
     app.kubernetes.io/name: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
     app.kubernetes.io/instance: website-db-vault-kaf-redis-arg-kust-kyv-elk-apm-sprig-spar
+
